@@ -14,7 +14,7 @@ description["settings_color"]="UI color of selected radio settings value text, e
 # ============================== Options address pointers
 declare -A addrs
 addrs["rtty_shift"]=000946f4
-addrs["gain_color"]=00087cae
+addrs["gain_color"]=00087cfb
 addrs["settings_color"]=00087c2b
 
 help()

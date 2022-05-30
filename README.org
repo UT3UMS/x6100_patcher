@@ -20,10 +20,18 @@ When performing patch on radio, remember to stop the service through =/etc/init.
 ** Theory behind
 Well, it needs a bit of a hex-magic. But valuables are easy find-and-replaceable in hexeditor. Here are some offsets to remember:
 
-| Address | Function                               |
-| 0x946F4 | RTTY shift and many more values around |
-| 0x8DB8C | ntpdate -u, yet to investigate         |
-| 0x87C2B | One of lables UI colors                |
+| Address | Function                                               |
+| 0x8DB8C | ntpdate -u, yet to investigate                         |
+| 0x87C2B | VOLUME/SQL THR/RF GAIN color                           |
+| 0x87CFB | TX POWER (and other selectable settings) color         |
+| 0x88515 | Start of some GPIO manipulations                       |
+| 0x9356E | Start of many values of settings, e.g filters, offsets |
+| 0x946F4 | RTTY shift value of 425                                |
+| 0x94648 | Start of RTTY RATE values                              |
+| 0x94971 | hardcoded ntp_server1                                  |
+| 0x949B8 | hardcoded ntp_server2                                  |
+| 0x97598 | Screenshot function (?)                                |
+|         |                                                        |
 
 It's actually possible to build a script to patch a binary:
 
