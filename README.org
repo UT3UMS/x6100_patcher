@@ -7,11 +7,18 @@ Xiegu x6100 is told to be a first ARM based HF-transeiver, running Linux. Most o
 
 By today (<2022-05-30 Mon>) the firmware is yet very fresh, but not opened for modification. E.g. lables of rf gain or tx power lables have a color, close to red, that makes them hard to read on a bluish background. Another example an RTTY shift, wich has a constant number of available values. Some well known broadcasters, like DWD, rely on values not available on the x6100.
 
-It was my motivation to dive into the binary and try to fix that things for me. I've ended up with a little script that simplifies that task and could be run on the radio iself. So you don't need a PC, just an ssh cliet (smartphone is fine) to change the values, if you need.
+It was my motivation to dive into the binary and try to fix that things for me. I've ended up with a little script that simplifies that task +and could be run on the radio iself. So you don't need a PC, just an ssh cliet (smartphone is fine) to change the values, if you need.+. Unfortunately, =xxd= on x6100 has very restricted functionality. Maybe in future I'll migrate the script to the =hexedit=.
 
 ** Usage
 =Syntax: x6100_patcher -s %key%=%value% -f %path/to/x6110_app%=
+
 See =x6100_patcher -h= to see the list of supported values for changing
+
+Example:
+#+NAME: example
+#+BEGIN_SRC sh :eval never
+./x6100_patcher.sh -s gain_color=ffaeae -f ./x6100_ui_v100_color
+#+END_SRC
 
 As soon as this script substitutes the existing values inside the binary, provided values shoud have the same bit-length as default. Otherwise it may lead to the segmentation fault. Remember to backup the default application.
 
