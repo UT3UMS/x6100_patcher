@@ -1,0 +1,84 @@
+* x6100 patcher
+** Disclaimer
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, YOU ARE USING THIS AT YOUR OWN RISK. PATCHING THE FIRMWARE MIGHT VOID YOUR TRANSEIVER WARRANTY. ENSURE MAKING A BACKUPS AND THINK OF WHAT ACTIONS YOU ARE PERFORMING. NONE OF THE AUTHORS, CONTRIBUTORS, ADMINISTRATORS, OR ANYONE ELSE CONNECTED WITH THIS REPOSITORY, IN ANY WAY WHATSOEVER, CAN BE RESPONSIBLE FOR YOUR USE OF THE SOFTWARE BELOW.
+
+** Motivation
+Xiegu x6100 is told to be a first ARM based HF-transeiver, running Linux. Most of the radio's features are provided by the app living in the =/usr/app_qt= folder of a device.
+
+By today (<2022-05-30 Mon>) the firmware is yet very fresh, but not opened for modification. E.g. lables of rf gain or tx power lables have a color, close to red, that makes them hard to read on a bluish background. Another example an RTTY shift, wich has a constant number of available values. Some well known broadcasters, like DWD, rely on values not available on the x6100.
+
+It was my motivation to dive into the binary and try to fix that things for me. I've ended up with a little script that simplifies that task and could be run on the radio iself. So you don't need a PC, just an ssh cliet (smartphone is fine) to change the values, if you need.
+
+** Usage
+=Syntax: x6100_patcher -s %key%=%value% -f %path/to/x6110_app%=
+See =x6100_patcher -h= to see the list of supported values for changing
+
+As soon as this script substitutes the existing values inside the binary, provided values shoud have the same bit-length as default. Otherwise it may lead to the segmentation fault. Remember to backup the default application.
+
+When performing patch on radio, remember to stop the service through =/etc/init.d=
+
+** Theory behind
+Well, it needs a bit of a hex-magic. But valuables are easy find-and-replaceable in hexeditor. Here are some offsets to remember:
+
+| Address | Function                               |
+| 0x946F4 | RTTY shift and many more values around |
+| 0x8DB8C | ntpdate -u, yet to investigate         |
+| 0x87C2B | One of lables UI colors                |
+
+It's actually possible to build a script to patch a binary:
+
+#+NAME: picking up values
+#+BEGIN_SRC sh :eval once :results raw
+hexdump -n0x946F3  -C ~/opt/x6100-stuff/dumps/x6100_ui_v100_play | tail -n3
+hexdump -s0x946F3  -C ~/opt/x6100-stuff/dumps/x6100_ui_v100_play -n16
+#+END_SRC
+
+#+RESULTS: picking up values
+000946e0  2c 22 32 30 30 22 2c 22  32 34 30 22 2c 22 33 35  |,"200","240","35|
+000946f0  30 22 2c                                          |0",|
+000946f3
+000946f3  22 34 32 35 22 2c 22 38  35 30 22 20 5c 0a 22 0a  |"425","850" \.".|
+00094703
+
+via regular echo it's doable:
+#+NAME: example
+#+BEGIN_SRC sh :eval never
+ xxd x6100_ui_v100_play | grep -i 000946f
+#000946f0: 3022 2c22 3432 3522 2c22 3835 3022 205c  0","425","850" \
+ echo "<000946f0: 3022 2c22 3435 3022 2c22 3835 3022 205c>" | xxd -r - x6100_ui_v100_play
+ xxd x6100_ui_v100_play | grep -i 000946f
+#000946f0: 3022 2c22 3435 3022 2c22 3835 3022 205c  0","450","850" \
+#+END_SRC
+
+So binary code for /"/ is 22, ""3**4** 3**2** 3**5**" gives 425. So patch-string could be composed in bash. It's just a hex ascii encoding.
+#+BEGIN_EXAMPLE
+        "  4 2  5 ""
+3022 2c22 3432 3522 2c22 3835 3022 205c
+#+END_EXAMPLE
+
+#+NAME: ASCII2hex converter
+#+BEGIN_SRC sh :eval once
+echo "\"420\"" | xxd -ps | head -c-3
+#+END_SRC
+
+#+RESULTS: ASCII2hex converter
+: 2234323022
+
+Looks like we can build a simple patch-composer for that particular case
+#+NAME: patch composer
+#+BEGIN_SRC bash :eval once
+VAL=570
+echo "<000946f3: $(echo "\"$VAL\"" | xxd -ps | head -c-3)>"
+#+END_SRC
+
+#+RESULTS: patch composer
+
+#+BEGIN_EXAMPLE
+ % echo "<000946f3: $(echo "\"$VAL\"" | xxd -ps | head -c-3)>" | xxd -r - x6100_ui_v100_play
+ % diff <(xxd x6100_ui_v100) <(xxd x6100_ui_v100_play)
+38000c38000
+< 000946f0: 3022 2c22 3432 3522 2c22 3835 3022 205c  0","425","850" \
+---
+> 000946f0: 3022 2c22 3537 3022 2c22 3835 3022 205c  0","570","850" \
+
+#+END_EXAMPLE
